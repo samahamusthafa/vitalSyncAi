@@ -2,35 +2,308 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WellDesk AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-  <div class="container">
-    <h1>WellDesk AI</h1>
-    <button id="startBtn">Start Session</button>
+  <div class="app">
 
-    <!-- ✅ Wrap video + canvas -->
-    <div class="video-container">
-      <video id="video" autoplay></video>
-      <canvas id="canvas"></canvas>
-    </div>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="9" r="4" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M4 20c0-4.418 3.582-7 8-7s8 2.582 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M17 4.5l2-2M19.5 8H22M17 11.5l2 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="logo-name">WellDesk</div>
+          <div class="logo-tag">AI Monitor</div>
+        </div>
+      </div>
 
-    <div class="stats">
-      <p>Blink Rate: <span id="blink">0</span></p>
-      <p>Posture: <span id="posture">Good</span></p>
-      <p>Stress: <span id="stress">Low</span></p>
-    </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>
+          Dashboard
+        </a>
+        <a href="#" class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 12h4l3-8 4 16 3-8h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Analytics
+        </a>
+        <a href="#" class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Alerts
+          <span class="nav-badge">3</span>
+        </a>
+        <a href="#" class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          Settings
+        </a>
+      </nav>
 
-    <div id="alertBox"></div>
+      <div class="sidebar-footer">
+        <div class="user-card">
+          <div class="user-avatar">AK</div>
+          <div>
+            <div class="user-name">Aryan K.</div>
+            <div class="user-plan">Pro Plan</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+
+      <!-- Top Bar -->
+      <div class="topbar">
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-sub">Real-time wellness monitoring</p>
+        </div>
+        <div class="topbar-right">
+          <div class="status-pill" id="statusPill">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Inactive</span>
+          </div>
+          <button class="btn-primary" id="startBtn" onclick="toggleSession()">Start Session</button>
+        </div>
+      </div>
+
+      <!-- Metrics Row -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon blink-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>
+          </div>
+          <div class="metric-body">
+            <div class="metric-label">Blink Rate</div>
+            <div class="metric-value" id="blinkVal">—</div>
+            <div class="metric-unit">per minute</div>
+          </div>
+          <div class="metric-status" id="blinkStatus"></div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon posture-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="metric-body">
+            <div class="metric-label">Posture</div>
+            <div class="metric-value text-val" id="postureVal">—</div>
+            <div class="metric-unit">spine alignment</div>
+          </div>
+          <div class="metric-badge badge-good" id="postureBadge" style="display:none;">Good</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon stress-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="metric-body">
+            <div class="metric-label">Stress Level</div>
+            <div class="metric-value text-val" id="stressVal">—</div>
+            <div class="metric-unit">facial tension</div>
+          </div>
+          <div class="metric-badge badge-low" id="stressBadge" style="display:none;">Low</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon time-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <div class="metric-body">
+            <div class="metric-label">Session Time</div>
+            <div class="metric-value mono" id="sessionTime">00:00</div>
+            <div class="metric-unit">elapsed</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Camera + Alerts row -->
+      <div class="content-grid">
+
+        <!-- Camera -->
+        <div class="camera-card">
+          <div class="card-header">
+            <span class="card-title">Live Feed</span>
+            <span class="live-badge" id="liveBadge">
+              <span class="live-dot"></span> LIVE
+            </span>
+          </div>
+          <div class="camera-view" id="cameraView">
+            <div class="corner-bracket tl"></div>
+            <div class="corner-bracket tr"></div>
+            <div class="corner-bracket bl"></div>
+            <div class="corner-bracket br"></div>
+            <video id="video" autoplay style="display:none;"></video>
+            <canvas id="canvas" style="display:none;"></canvas>
+            <div class="camera-placeholder" id="placeholder">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
+                <rect x="2" y="6" width="14" height="12" rx="2.5" stroke="#4a5568" stroke-width="1.5"/>
+                <path d="M16 10.5l6-3.5v10l-6-3.5v-3z" stroke="#4a5568" stroke-width="1.5" stroke-linejoin="round"/>
+              </svg>
+              <p>Camera preview will appear here</p>
+              <span>Start a session to begin monitoring</span>
+            </div>
+            <div class="face-ring" id="faceRing" style="display:none;"></div>
+            <div class="scan-line" id="scanLine" style="display:none;"></div>
+            <div class="camera-label" id="cameraLabel">STANDBY</div>
+          </div>
+          <div class="camera-footer">
+            <div class="cam-meta">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 10l6-4v12l-6-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              720p · 30fps
+            </div>
+            <div class="cam-meta">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              Processed locally
+            </div>
+          </div>
+        </div>
+
+        <!-- Right panel -->
+        <div class="right-panel">
+
+          <!-- Alerts -->
+          <div class="panel-card">
+            <div class="card-header">
+              <span class="card-title">Recent Alerts</span>
+              <span class="alert-count" id="alertCount">0 new</span>
+            </div>
+            <div class="alerts-list" id="alertsList">
+              <div class="alert-empty">No alerts yet — start a session</div>
+            </div>
+          </div>
+
+          <!-- Tips -->
+          <div class="panel-card">
+            <div class="card-header">
+              <span class="card-title">Wellness Tips</span>
+            </div>
+            <div class="tips-list">
+              <div class="tip-item">
+                <div class="tip-num">1</div>
+                <div class="tip-text">Blink 15–20× per minute. Conscious blinking prevents dry eyes during screen time.</div>
+              </div>
+              <div class="tip-item">
+                <div class="tip-num">2</div>
+                <div class="tip-text">Keep shoulders level and back straight. Align ears over shoulders.</div>
+              </div>
+              <div class="tip-item">
+                <div class="tip-num">3</div>
+                <div class="tip-text">Apply the 20-20-20 rule: every 20 min, look 20 feet away for 20 seconds.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
   </div>
 
-  <!-- ✅ Correct scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-
   <script src="script.js"></script>
+
+  <script>
+    let active = false, seconds = 0, timer = null, alertCount = 0;
+
+    const alerts = [
+      { type: 'info', msg: 'Blink rate dropping — remember to blink', time: '2m ago' },
+      { type: 'warn', msg: 'Posture drift detected — sit up straight', time: '8m ago' },
+      { type: 'good', msg: 'Break taken — great job!', time: '22m ago' },
+    ];
+
+    function toggleSession() {
+      active = !active;
+      const btn = document.getElementById('startBtn');
+      const dot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      const pill = document.getElementById('statusPill');
+      const cameraLabel = document.getElementById('cameraLabel');
+      const placeholder = document.getElementById('placeholder');
+      const faceRing = document.getElementById('faceRing');
+      const scanLine = document.getElementById('scanLine');
+      const liveBadge = document.getElementById('liveBadge');
+      const cameraView = document.getElementById('cameraView');
+
+      if (active) {
+        btn.textContent = 'End Session';
+        btn.classList.add('btn-danger');
+        dot.classList.add('active');
+        statusText.textContent = 'Active';
+        pill.classList.add('pill-active');
+        cameraLabel.textContent = 'ANALYZING';
+        cameraLabel.classList.add('label-active');
+        placeholder.style.display = 'none';
+        faceRing.style.display = 'block';
+        scanLine.style.display = 'block';
+        liveBadge.classList.add('live-on');
+        cameraView.classList.add('camera-active');
+
+        seconds = 0;
+        timer = setInterval(() => {
+          seconds++;
+          const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+          const s = String(seconds % 60).padStart(2, '0');
+          document.getElementById('sessionTime').textContent = m + ':' + s;
+
+          if (seconds === 2) {
+            document.getElementById('blinkVal').textContent = '14';
+            document.getElementById('postureVal').textContent = 'Upright';
+            document.getElementById('stressVal').textContent = 'Calm';
+            document.getElementById('postureBadge').style.display = 'inline-block';
+            document.getElementById('stressBadge').style.display = 'inline-block';
+            renderAlerts();
+          }
+        }, 1000);
+
+      } else {
+        btn.textContent = 'Start Session';
+        btn.classList.remove('btn-danger');
+        dot.classList.remove('active');
+        statusText.textContent = 'Inactive';
+        pill.classList.remove('pill-active');
+        cameraLabel.textContent = 'STANDBY';
+        cameraLabel.classList.remove('label-active');
+        placeholder.style.display = 'flex';
+        faceRing.style.display = 'none';
+        scanLine.style.display = 'none';
+        liveBadge.classList.remove('live-on');
+        cameraView.classList.remove('camera-active');
+        clearInterval(timer);
+        document.getElementById('sessionTime').textContent = '00:00';
+        document.getElementById('blinkVal').textContent = '—';
+        document.getElementById('postureVal').textContent = '—';
+        document.getElementById('stressVal').textContent = '—';
+        document.getElementById('postureBadge').style.display = 'none';
+        document.getElementById('stressBadge').style.display = 'none';
+        document.getElementById('alertsList').innerHTML = '<div class="alert-empty">No alerts yet — start a session</div>';
+        document.getElementById('alertCount').textContent = '0 new';
+      }
+    }
+
+    function renderAlerts() {
+      const list = document.getElementById('alertsList');
+      list.innerHTML = alerts.map(a => `
+        <div class="alert-item alert-${a.type}">
+          <div class="alert-dot dot-${a.type}"></div>
+          <span class="alert-msg">${a.msg}</span>
+          <span class="alert-time">${a.time}</span>
+        </div>
+      `).join('');
+      document.getElementById('alertCount').textContent = `${alerts.length} new`;
+    }
+  </script>
 </body>
 </html>
