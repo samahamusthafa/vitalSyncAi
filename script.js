@@ -13,11 +13,17 @@ let timerInst     = null;
 let seconds       = 0;
 const alertsLog   = [];
 
+// ─── Hydration State ──────────────────────────────────────────────────────
+const HYDRATE_INTERVAL = 30;   // 10 seconds for testing — change to 1200 for final demo
+let hydrateSecsLeft    = HYDRATE_INTERVAL;
+let hydrateTimer       = null;
+let cupsToday          = 0;
+
 // ─── EAR landmarks ────────────────────────────────────────────────────────
 const LEFT_EYE  = [33,  160, 158, 133, 153, 144];
 const RIGHT_EYE = [362, 385, 387, 263, 373, 380];
-const EAR_CLOSE = 0.20;  // below this = eye closed
-const EAR_OPEN  = 0.22;  // above this = eye open (hysteresis)
+const EAR_CLOSE = 0.20;
+const EAR_OPEN  = 0.22;
 
 function ear(lm, idx) {
   const p = idx.map(i => lm[i]);
@@ -73,7 +79,7 @@ function onResults(results) {
 }
 
 function setMetric(valId, badgeId, text, cls) {
-  document.getElementById(valId).textContent  = text;
+  document.getElementById(valId).textContent = text;
   const b = document.getElementById(badgeId);
   b.textContent   = text;
   b.className     = "metric-badge " + cls;
@@ -128,16 +134,28 @@ function resetMetrics() {
 
 // ─── Start / Stop ─────────────────────────────────────────────────────────
 async function startSession() {
-  blinkCount    = 0;
-  lastEyeState  = "open";
+  blinkCount       = 0;
+  lastEyeState     = "open";
   alertsLog.length = 0;
-  seconds       = 0;
+  seconds          = 0;
+  cupsToday        = 0;
+
+  // Start hydration timer — inline here so nothing can go wrong
+  hydrateSecsLeft = HYDRATE_INTERVAL;
+  clearInterval(hydrateTimer);
+  hydrateTimer = setInterval(() => {
+    hydrateSecsLeft--;
+    if (hydrateSecsLeft <= 0) {
+      showHydratePopup();
+      hydrateSecsLeft = HYDRATE_INTERVAL;
+    }
+  }, 1000);
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { width: 640, height: 480, facingMode: "user" }
     });
-    video.srcObject = stream;
+    video.srcObject      = stream;
     video.style.display  = "block";
     canvas.style.display = "block";
 
@@ -169,6 +187,8 @@ async function startSession() {
 function stopSession() {
   isRunning = false;
   clearInterval(timerInst);
+  clearInterval(hydrateTimer);
+  closeHydratePopup();
   if (cameraInst) { cameraInst.stop(); cameraInst = null; }
   if (video.srcObject) {
     video.srcObject.getTracks().forEach(t => t.stop());
@@ -181,13 +201,54 @@ function stopSession() {
 }
 
 // ─── Button wiring ────────────────────────────────────────────────────────
-// Replace the toggleSession() onclick set in HTML with a single controller
 document.getElementById("startBtn").onclick = () => {
   if (!isRunning) startSession();
   else            stopSession();
 };
 
-// ─── Hydration reminder ───────────────────────────────────────────────────
-setInterval(() => {
-  if (isRunning) pushAlert("info", "Drink water — stay hydrated");
-}, 60000);
+// ─── Hydration Popup ──────────────────────────────────────────────────────
+function showHydratePopup() {
+  renderPopupCups();
+  document.getElementById("popupMsg").textContent = "";
+  const overlay = document.getElementById("hydrateOverlay");
+  // Set every style property explicitly via JS — no CSS can block this
+  overlay.style.cssText =
+    "display:flex; position:fixed; top:0; left:0; width:100%; height:100%;" +
+    "background:rgba(0,0,0,0.6); z-index:99999;" +
+    "align-items:center; justify-content:center;";
+}
+
+function closeHydratePopup() {
+  const overlay = document.getElementById("hydrateOverlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+function popupDrink() {
+  cupsToday++;
+  renderPopupCups();
+  document.getElementById("popupMsg").textContent = "Logged! " + cupsToday + " cups today.";
+  pushAlert("good", "Drink logged — " + cupsToday + " cups today");
+  setTimeout(closeHydratePopup, 10);
+}
+
+function popupSnooze() {
+  hydrateSecsLeft = 300; // snooze 5 minutes
+  document.getElementById("popupMsg").textContent = "Snoozed — reminding you in 5 minutes.";
+  setTimeout(closeHydratePopup, 10
+
+  );
+}
+
+function renderPopupCups() {
+  const el = document.getElementById("popupCups");
+  if (!el) return;
+  el.innerHTML = "";
+  for (let i = 0; i < 8; i++) {
+    const d = document.createElement("div");
+    d.style.cssText =
+      "width:18px; height:22px; border-radius:3px 3px 5px 5px; border:1.5px solid " +
+      (i < cupsToday ? "#22c55e" : "rgba(255,255,255,0.15)") +
+      "; background:" + (i < cupsToday ? "#22c55e" : "transparent") + ";";
+    el.appendChild(d);
+  }
+}

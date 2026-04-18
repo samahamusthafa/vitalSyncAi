@@ -3,222 +3,1180 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WellDesk AI</title>
+  <title>WellDesk AI – Posture Correction</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b0f1a; --bg-2: #111827; --bg-3: #1a2233; --bg-4: #1f2d44;
+      --border: rgba(255,255,255,0.07); --border-md: rgba(255,255,255,0.11);
+      --text-1: #f0f4ff; --text-2: #8899b4; --text-3: #4a5a72;
+      --accent: #3b82f6; --accent-dim: rgba(59,130,246,0.12); --accent-border: rgba(59,130,246,0.35);
+      --green: #22c55e; --green-dim: rgba(34,197,94,0.12);
+      --amber: #f59e0b; --amber-dim: rgba(245,158,11,0.12);
+      --red: #ef4444; --red-dim: rgba(239,68,68,0.12);
+      --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px;
+      --sidebar-w: 220px; --font: 'DM Sans', sans-serif; --font-mono: 'DM Mono', monospace;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text-1); font-family: var(--font); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* Sidebar */
+    .sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--bg-2); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.5rem 1rem; gap: 2rem; }
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
+    .logo-icon { width: 36px; height: 36px; background: var(--accent); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
+    .logo-name { font-size: 15px; font-weight: 600; color: var(--text-1); letter-spacing: -0.01em; }
+    .logo-tag { font-size: 11px; color: var(--text-3); letter-spacing: 0.04em; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-md); color: var(--text-2); text-decoration: none; font-size: 13.5px; font-weight: 400; transition: background 0.15s, color 0.15s; position: relative; cursor: pointer; }
+    .nav-item:hover { background: var(--bg-3); color: var(--text-1); }
+    .nav-item.active { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
+    .nav-badge { margin-left: auto; background: var(--accent); color: white; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 20px; }
+    .sidebar-footer { border-top: 1px solid var(--border); padding-top: 1rem; }
+    .user-card { display: flex; align-items: center; gap: 10px; }
+    .user-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-dim); border: 1px solid var(--accent-border); color: var(--accent); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+    .user-name { font-size: 13px; font-weight: 500; color: var(--text-1); }
+    .user-plan { font-size: 11px; color: var(--text-3); }
+
+    /* Main */
+    .main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1.25rem; padding: 1.75rem 2rem; background: var(--bg); }
+    .topbar { display: flex; align-items: flex-start; justify-content: space-between; }
+    .page-title { font-size: 22px; font-weight: 600; color: var(--text-1); letter-spacing: -0.02em; }
+    .page-sub { font-size: 13px; color: var(--text-3); margin-top: 2px; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .status-pill { display: flex; align-items: center; gap: 7px; padding: 6px 14px; background: var(--bg-2); border: 1px solid var(--border-md); border-radius: 20px; font-size: 12.5px; color: var(--text-2); font-weight: 500; }
+    .status-pill.pill-active { background: var(--green-dim); border-color: rgba(34,197,94,0.3); color: var(--green); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
+    .status-dot.active { background: var(--green); box-shadow: 0 0 0 3px rgba(34,197,94,0.2); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(34,197,94,0.2); } 50% { box-shadow: 0 0 0 6px rgba(34,197,94,0.05); } }
+    .btn-primary { padding: 8px 18px; background: var(--accent); color: white; border: none; border-radius: var(--radius-md); font-family: var(--font); font-size: 13.5px; font-weight: 500; cursor: pointer; transition: background 0.15s, transform 0.1s; letter-spacing: 0.01em; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary.btn-danger { background: var(--red); }
+    .btn-primary.btn-danger:hover { background: #dc2626; }
+
+    /* Metrics */
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .metric-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.2rem; display: flex; align-items: flex-start; gap: 12px; position: relative; transition: border-color 0.2s; }
+    .metric-card:hover { border-color: var(--border-md); }
+    .metric-icon { width: 36px; height: 36px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .blink-icon { background: rgba(59,130,246,0.12); color: var(--accent); }
+    .posture-icon { background: rgba(34,197,94,0.12); color: var(--green); }
+    .stress-icon { background: rgba(245,158,11,0.12); color: var(--amber); }
+    .time-icon { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+    .metric-body { flex: 1; min-width: 0; }
+    .metric-label { font-size: 11px; font-weight: 500; color: var(--text-3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 3px; }
+    .metric-value { font-size: 24px; font-weight: 600; color: var(--text-1); line-height: 1.1; letter-spacing: -0.02em; }
+    .metric-value.text-val { font-size: 16px; padding-top: 4px; }
+    .metric-value.mono { font-family: var(--font-mono); font-size: 20px; }
+    .metric-unit { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+    .metric-badge { position: absolute; top: 12px; right: 12px; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.04em; }
+    .badge-good { background: var(--green-dim); color: var(--green); }
+    .badge-warn { background: var(--amber-dim); color: var(--amber); }
+    .badge-low { background: var(--accent-dim); color: var(--accent); }
+
+    /* Content grid */
+    .content-grid { display: grid; grid-template-columns: 1fr 400px; gap: 12px; flex: 1; }
+
+    /* Camera card */
+    .camera-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+    .card-title { font-size: 13px; font-weight: 500; color: var(--text-1); }
+    .live-badge { display: flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-3); background: var(--bg-3); padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border); transition: all 0.3s; }
+    .live-badge.live-on { color: var(--red); background: var(--red-dim); border-color: rgba(239,68,68,0.3); }
+    .live-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .live-badge.live-on .live-dot { animation: blink-dot 1.2s ease-in-out infinite; }
+    @keyframes blink-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+    .camera-view { flex: 1; background: #070c14; position: relative; display: flex; align-items: center; justify-content: center; min-height: 260px; overflow: hidden; }
+    .corner-bracket { position: absolute; width: 20px; height: 20px; border-color: #2563eb; border-style: solid; opacity: 0.5; transition: opacity 0.3s; }
+    .camera-active .corner-bracket { opacity: 0.8; }
+    .corner-bracket.tl { top: 16px; left: 16px; border-width: 2px 0 0 2px; border-radius: 3px 0 0 0; }
+    .corner-bracket.tr { top: 16px; right: 16px; border-width: 2px 2px 0 0; border-radius: 0 3px 0 0; }
+    .corner-bracket.bl { bottom: 16px; left: 16px; border-width: 0 0 2px 2px; border-radius: 0 0 0 3px; }
+    .corner-bracket.br { bottom: 16px; right: 16px; border-width: 0 2px 2px 0; border-radius: 0 0 3px 0; }
+    .camera-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; color: var(--text-3); }
+    .camera-placeholder p { font-size: 14px; color: var(--text-2); }
+    .camera-placeholder span { font-size: 12px; color: var(--text-3); }
+    .scan-line { position: absolute; left: 16px; right: 16px; height: 1px; background: linear-gradient(90deg, transparent, rgba(59,130,246,0.5), transparent); animation: scan 3s linear infinite; }
+    @keyframes scan { 0% { top: 15%; } 100% { top: 85%; } }
+    .camera-label { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; color: var(--text-3); background: rgba(7,12,20,0.8); padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); transition: all 0.3s; }
+    .camera-label.label-active { color: var(--accent); border-color: var(--accent-border); }
+    .camera-footer { padding: 10px 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 1.5rem; }
+    .cam-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); }
+
+    /* Right panel */
+    .right-panel { display: flex; flex-direction: column; gap: 12px; }
+    .panel-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .alert-count { font-size: 11px; font-weight: 500; color: var(--accent); background: var(--accent-dim); padding: 2px 8px; border-radius: 20px; }
+    .alerts-list { padding: 0.5rem 0; max-height: 160px; overflow-y: auto; }
+    .alert-empty { padding: 1rem 1.25rem; font-size: 13px; color: var(--text-3); text-align: center; }
+    .alert-item { display: flex; align-items: center; gap: 10px; padding: 10px 1.25rem; border-bottom: 1px solid var(--border); }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-info { background: var(--accent); }
+    .dot-warn { background: var(--amber); }
+    .dot-good { background: var(--green); }
+    .alert-msg { flex: 1; font-size: 12.5px; color: var(--text-1); line-height: 1.4; }
+    .alert-time { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+
+    /* ── POSTURE CORRECTION PANEL ─────────────────────────────────────── */
+    .posture-panel { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .posture-body { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 14px; }
+
+    /* Posture score ring */
+    .score-row { display: flex; align-items: center; gap: 16px; }
+    .score-ring-wrap { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+    .score-ring-wrap svg { transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: var(--bg-3); stroke-width: 6; }
+    .ring-fill { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease, stroke 0.4s; }
+    .score-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; font-weight: 600; color: var(--text-1); font-family: var(--font-mono); }
+    .score-info { flex: 1; }
+    .score-title { font-size: 15px; font-weight: 600; color: var(--text-1); margin-bottom: 3px; }
+    .score-desc { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+
+    /* Posture metrics breakdown */
+    .posture-breakdown { display: flex; flex-direction: column; gap: 8px; }
+    .breakdown-item { display: flex; align-items: center; gap: 10px; }
+    .breakdown-label { font-size: 12px; color: var(--text-2); width: 90px; flex-shrink: 0; }
+    .breakdown-bar { flex: 1; height: 5px; background: var(--bg-4); border-radius: 10px; overflow: hidden; }
+    .breakdown-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease, background 0.4s; }
+    .breakdown-val { font-size: 11px; font-family: var(--font-mono); color: var(--text-2); width: 36px; text-align: right; }
+
+    /* Posture guidance box */
+    .guidance-box { background: var(--bg-3); border: 1px solid var(--border-md); border-radius: var(--radius-md); padding: 12px 14px; }
+    .guidance-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .guidance-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+    .guidance-icon.g-good { background: var(--green-dim); color: var(--green); }
+    .guidance-icon.g-warn { background: var(--amber-dim); color: var(--amber); }
+    .guidance-icon.g-bad { background: var(--red-dim); color: var(--red); }
+    .guidance-title { font-size: 12px; font-weight: 600; }
+    .guidance-title.t-good { color: var(--green); }
+    .guidance-title.t-warn { color: var(--amber); }
+    .guidance-title.t-bad { color: var(--red); }
+    .guidance-steps { display: flex; flex-direction: column; gap: 5px; }
+    .guidance-step { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-2); line-height: 1.4; }
+    .step-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; margin-top: 5px; }
+
+    /* Posture history mini-chart */
+    .history-chart { display: flex; align-items: flex-end; gap: 3px; height: 36px; }
+    .history-bar { flex: 1; border-radius: 3px 3px 0 0; min-height: 4px; transition: height 0.4s ease, background 0.3s; }
+
+    /* Posture alert banner */
+    .posture-alert-banner { display: none; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: var(--radius-md); margin-top: 2px; }
+    .posture-alert-banner.visible { display: flex; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .banner-icon { font-size: 16px; }
+    .banner-text { font-size: 12px; color: var(--amber); flex: 1; }
+    .banner-dismiss { background: none; border: none; color: var(--text-3); cursor: pointer; font-size: 14px; }
+
+    /* Tips */
+    .tips-list { padding: 0.5rem 0; }
+    .tip-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 1.25rem; border-bottom: 1px solid var(--border); }
+    .tip-item:last-child { border-bottom: none; }
+    .tip-num { width: 20px; height: 20px; border-radius: 50%; background: var(--bg-4); border: 1px solid var(--border-md); font-size: 11px; font-weight: 600; color: var(--text-2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .tip-text { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+
+    /* ── STRESS DETECTION PANEL ──────────────────────────────────────────── */
+    .stress-panel { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .stress-body { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 14px; }
+    .stress-level-row { display: flex; align-items: center; gap: 14px; }
+    .stress-gauge-wrap { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+    .stress-gauge-wrap svg { transform: rotate(-90deg); }
+    .sgauge-bg   { fill: none; stroke: var(--bg-3); stroke-width: 6; }
+    .sgauge-fill { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease, stroke 0.4s; }
+    .stress-num  { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 18px; font-weight: 600; color: var(--text-1); font-family: var(--font-mono); }
+    .stress-summary { flex: 1; }
+    .stress-level-label { font-size: 15px; font-weight: 600; color: var(--text-1); margin-bottom: 3px; }
+    .stress-level-desc  { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+    .stress-signals { display: flex; flex-direction: column; gap: 8px; }
+    .signal-row { display: flex; align-items: center; gap: 10px; }
+    .signal-icon { width: 26px; height: 26px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; }
+    .signal-icon.si-brow { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+    .signal-icon.si-eye  { background: rgba(59,130,246,0.12);  color: var(--accent); }
+    .signal-icon.si-jaw  { background: rgba(245,158,11,0.12);  color: var(--amber); }
+    .signal-icon.si-mouth{ background: rgba(239,68,68,0.12);   color: var(--red); }
+    .signal-label { font-size: 12px; color: var(--text-2); width: 96px; flex-shrink: 0; }
+    .signal-bar   { flex: 1; height: 5px; background: var(--bg-4); border-radius: 10px; overflow: hidden; }
+    .signal-fill  { height: 100%; border-radius: 10px; transition: width 0.4s ease, background 0.3s; }
+    .signal-val   { font-size: 11px; font-family: var(--font-mono); color: var(--text-2); width: 28px; text-align: right; }
+    .stress-tip-box { background: var(--bg-3); border: 1px solid var(--border-md); border-radius: var(--radius-md); padding: 10px 14px; }
+    .stress-tip-title { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-3); margin-bottom: 6px; }
+    .stress-tip-text  { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+    .stress-history { display: flex; align-items: flex-end; gap: 3px; height: 36px; }
+    .sh-bar { flex: 1; border-radius: 3px 3px 0 0; min-height: 4px; transition: height 0.4s ease, background 0.3s; }
+    .stress-alert-banner { display: none; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: var(--radius-md); }
+    .stress-alert-banner.visible { display: flex; animation: slideIn 0.3s ease; }
+
+    .main::-webkit-scrollbar { width: 5px; }
+    .main::-webkit-scrollbar-track { background: transparent; }
+    .main::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 10px; }
+
+    @media (max-width: 1200px) { .content-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 700px) { .sidebar { display: none; } .main { padding: 1.25rem; } }
+  </style>
 </head>
 <body>
+<div class="app">
 
-  <div class="app">
-
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-logo">
-        <div class="logo-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="9" r="4" stroke="currentColor" stroke-width="1.8"/>
-            <path d="M4 20c0-4.418 3.582-7 8-7s8 2.582 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            <path d="M17 4.5l2-2M19.5 8H22M17 11.5l2 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-          </svg>
-        </div>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="9" r="4" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M4 20c0-4.418 3.582-7 8-7s8 2.582 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M17 4.5l2-2M19.5 8H22M17 11.5l2 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-name">WellDesk</div>
+        <div class="logo-tag">AI Monitor</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C8 2 6 6 6 9c0 2 .5 3.5 2 5l1 1v3h6v-3l1-1c1.5-1.5 2-3 2-5 0-3-2-7-6-7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 18h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Posture Coach
+        <span class="nav-badge">NEW</span>
+      </a>
+      <a class="nav-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Alerts
+        <span class="nav-badge">3</span>
+      </a>
+      <a class="nav-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Settings
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">AK</div>
         <div>
-          <div class="logo-name">WellDesk</div>
-          <div class="logo-tag">AI Monitor</div>
+          <div class="user-name">UserName</div>
+          <div class="user-plan">Pro Plan</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">Real-time wellness monitoring</p>
+      </div>
+      <div class="topbar-right">
+        <div class="status-pill" id="statusPill">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Inactive</span>
+        </div>
+        <button class="btn-primary" id="startBtn">Start Session</button>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-icon blink-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>
+        </div>
+        <div class="metric-body">
+          <div class="metric-label">Blink Rate</div>
+          <div class="metric-value" id="blinkVal">—</div>
+          <div class="metric-unit">per minute</div>
+        </div>
+        <div class="metric-status" id="blinkStatus"></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon posture-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="metric-body">
+          <div class="metric-label">Posture Score</div>
+          <div class="metric-value mono" id="postureScoreMetric">—</div>
+          <div class="metric-unit">out of 100</div>
+        </div>
+        <div class="metric-badge badge-good" id="postureBadge" style="display:none;">Good</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon stress-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="metric-body">
+          <div class="metric-label">Stress Level</div>
+          <div class="metric-value text-val" id="stressVal">—</div>
+          <div class="metric-unit" id="stressUnit">facial tension</div>
+        </div>
+        <div class="metric-badge badge-low" id="stressBadge" style="display:none;">Low</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon time-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="metric-body">
+          <div class="metric-label">Session Time</div>
+          <div class="metric-value mono" id="sessionTime">00:00</div>
+          <div class="metric-unit">elapsed</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content grid -->
+    <div class="content-grid">
+
+      <!-- Camera -->
+      <div class="camera-card">
+        <div class="card-header">
+          <span class="card-title">Live Feed</span>
+          <span class="live-badge" id="liveBadge">
+            <span class="live-dot"></span> LIVE
+          </span>
+        </div>
+        <div class="camera-view" id="cameraView">
+          <video id="video" autoplay playsinline muted style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;"></video>
+          <canvas id="canvas" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%;"></canvas>
+          <div class="camera-placeholder" id="placeholder">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="14" height="12" rx="2.5" stroke="#4a5568" stroke-width="1.5"/><path d="M16 10.5l6-3.5v10l-6-3.5v-3z" stroke="#4a5568" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            <p>Camera preview will appear here</p>
+            <span>Start a session to begin monitoring</span>
+          </div>
+          <!-- Posture overlay: skeleton lines drawn on canvas -->
+          <div class="corner-bracket tl"></div>
+          <div class="corner-bracket tr"></div>
+          <div class="corner-bracket bl"></div>
+          <div class="corner-bracket br"></div>
+          <div class="scan-line" id="scanLine" style="display:none;"></div>
+
+          <!-- Posture overlay badges -->
+          <div id="postureOverlay" style="display:none; position:absolute; top:14px; left:14px; display:none; flex-direction:column; gap:6px;">
+            <div id="tiltBadge" style="background:rgba(7,12,20,0.85); border:1px solid var(--border-md); border-radius:6px; padding:4px 10px; font-size:11px; font-family:var(--font-mono); color:var(--text-2); letter-spacing:0.04em;">TILT —</div>
+            <div id="leanBadge" style="background:rgba(7,12,20,0.85); border:1px solid var(--border-md); border-radius:6px; padding:4px 10px; font-size:11px; font-family:var(--font-mono); color:var(--text-2); letter-spacing:0.04em;">LEAN —</div>
+            <div id="distBadge" style="background:rgba(7,12,20,0.85); border:1px solid var(--border-md); border-radius:6px; padding:4px 10px; font-size:11px; font-family:var(--font-mono); color:var(--text-2); letter-spacing:0.04em;">DIST —</div>
+          </div>
+
+          <div class="camera-label" id="cameraLabel">STANDBY</div>
+        </div>
+        <div class="camera-footer">
+          <div class="cam-meta">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 10l6-4v12l-6-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            720p · 30fps
+          </div>
+          <div class="cam-meta">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            Processed locally
+          </div>
+          <div class="cam-meta" id="postureStatusMeta" style="margin-left:auto;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M8 7l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="postureStatusText">—</span>
+          </div>
         </div>
       </div>
 
-      <nav class="sidebar-nav">
-        <a href="#" class="nav-item active">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>
-          Dashboard
-        </a>
-        <a href="#" class="nav-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 12h4l3-8 4 16 3-8h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Analytics
-        </a>
-        <a href="#" class="nav-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Alerts
-          <span class="nav-badge">3</span>
-        </a>
-        <a href="#" class="nav-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-          Settings
-        </a>
-      </nav>
+      <!-- Right panel -->
+      <div class="right-panel">
 
-      <div class="sidebar-footer">
-        <div class="user-card">
-          <div class="user-avatar">AK</div>
-          <div>
-            <div class="user-name">Aryan K.</div>
-            <div class="user-plan">Pro Plan</div>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main">
-
-      <!-- Top Bar -->
-      <div class="topbar">
-        <div>
-          <h1 class="page-title">Dashboard</h1>
-          <p class="page-sub">Real-time wellness monitoring</p>
-        </div>
-        <div class="topbar-right">
-          <div class="status-pill" id="statusPill">
-            <span class="status-dot" id="statusDot"></span>
-            <span id="statusText">Inactive</span>
-          </div>
-          <button class="btn-primary" id="startBtn">Start Session</button>
-        </div>
-      </div>
-
-      <!-- Metrics Row -->
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-icon blink-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Blink Rate</div>
-            <div class="metric-value" id="blinkVal">—</div>
-            <div class="metric-unit">per minute</div>
-          </div>
-          <div class="metric-status" id="blinkStatus"></div>
-        </div>
-
-        <div class="metric-card">
-          <div class="metric-icon posture-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Posture</div>
-            <div class="metric-value text-val" id="postureVal">—</div>
-            <div class="metric-unit">spine alignment</div>
-          </div>
-          <div class="metric-badge badge-good" id="postureBadge" style="display:none;">Good</div>
-        </div>
-
-        <div class="metric-card">
-          <div class="metric-icon stress-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Stress Level</div>
-            <div class="metric-value text-val" id="stressVal">—</div>
-            <div class="metric-unit">facial tension</div>
-          </div>
-          <div class="metric-badge badge-low" id="stressBadge" style="display:none;">Low</div>
-        </div>
-
-        <div class="metric-card">
-          <div class="metric-icon time-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          </div>
-          <div class="metric-body">
-            <div class="metric-label">Session Time</div>
-            <div class="metric-value mono" id="sessionTime">00:00</div>
-            <div class="metric-unit">elapsed</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Camera + Alerts row -->
-      <div class="content-grid">
-
-        <!-- Camera -->
-        <div class="camera-card">
+        <!-- ── POSTURE CORRECTION CARD ── -->
+        <div class="posture-panel">
           <div class="card-header">
-            <span class="card-title">Live Feed</span>
-            <span class="live-badge" id="liveBadge">
-              <span class="live-dot"></span> LIVE
-            </span>
+            <span class="card-title">Posture Correction</span>
+            <span id="postureGradeBadge" class="metric-badge badge-good" style="position:static; display:none;"></span>
           </div>
-          <div class="camera-view" id="cameraView">
-            <!-- video fills the box; canvas sits on top for landmarks only -->
-            <video id="video" autoplay playsinline muted style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;"></video>
-            <canvas id="canvas" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%;"></canvas>
+          <div class="posture-body">
 
-            <!-- placeholder shown when camera is off -->
-            <div class="camera-placeholder" id="placeholder">
-              <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="6" width="14" height="12" rx="2.5" stroke="#4a5568" stroke-width="1.5"/>
-                <path d="M16 10.5l6-3.5v10l-6-3.5v-3z" stroke="#4a5568" stroke-width="1.5" stroke-linejoin="round"/>
-              </svg>
-              <p>Camera preview will appear here</p>
-              <span>Start a session to begin monitoring</span>
+            <!-- Score ring + summary -->
+            <div class="score-row">
+              <div class="score-ring-wrap">
+                <svg width="72" height="72" viewBox="0 0 72 72">
+                  <circle class="ring-bg" cx="36" cy="36" r="30"/>
+                  <circle class="ring-fill" id="scoreRing" cx="36" cy="36" r="30"
+                    stroke="#22c55e"
+                    stroke-dasharray="188.5"
+                    stroke-dashoffset="188.5"/>
+                </svg>
+                <div class="score-label" id="scoreLabel">—</div>
+              </div>
+              <div class="score-info">
+                <div class="score-title" id="scoreTitle">Not started</div>
+                <div class="score-desc" id="scoreDesc">Start a session to begin real-time posture analysis and receive corrective guidance.</div>
+              </div>
             </div>
 
-            <!-- decorative overlays — pointer-events:none so they don't block video -->
-            <div class="corner-bracket tl"></div>
-            <div class="corner-bracket tr"></div>
-            <div class="corner-bracket bl"></div>
-            <div class="corner-bracket br"></div>
-            <div class="scan-line" id="scanLine" style="display:none;"></div>
-            <div class="camera-label" id="cameraLabel">STANDBY</div>
-          </div>
-          <div class="camera-footer">
-            <div class="cam-meta">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 10l6-4v12l-6-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              720p · 30fps
+            <!-- Alert banner -->
+            <div class="posture-alert-banner" id="postureBanner">
+              <span class="banner-icon">⚠</span>
+              <span class="banner-text" id="bannerText">Posture correction needed</span>
+              <button class="banner-dismiss" onclick="document.getElementById('postureBanner').classList.remove('visible')">✕</button>
             </div>
-            <div class="cam-meta">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-              Processed locally
+
+            <!-- Breakdown bars -->
+            <div class="posture-breakdown">
+              <div class="breakdown-item">
+                <span class="breakdown-label">Head tilt</span>
+                <div class="breakdown-bar"><div class="breakdown-fill" id="barTilt" style="width:0%; background:var(--green);"></div></div>
+                <span class="breakdown-val" id="valTilt">—</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">Forward lean</span>
+                <div class="breakdown-bar"><div class="breakdown-fill" id="barLean" style="width:0%; background:var(--green);"></div></div>
+                <span class="breakdown-val" id="valLean">—</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">Face distance</span>
+                <div class="breakdown-bar"><div class="breakdown-fill" id="barDist" style="width:0%; background:var(--green);"></div></div>
+                <span class="breakdown-val" id="valDist">—</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">Symmetry</span>
+                <div class="breakdown-bar"><div class="breakdown-fill" id="barSym" style="width:0%; background:var(--green);"></div></div>
+                <span class="breakdown-val" id="valSym">—</span>
+              </div>
             </div>
+
+            <!-- Guidance -->
+            <div class="guidance-box" id="guidanceBox">
+              <div class="guidance-header">
+                <div class="guidance-icon g-warn" id="guidanceIcon">!</div>
+                <div class="guidance-title t-warn" id="guidanceTitle">Waiting for data</div>
+              </div>
+              <div class="guidance-steps" id="guidanceSteps">
+                <div class="guidance-step"><div class="step-dot"></div>Start a session to get live posture corrections</div>
+              </div>
+            </div>
+
+            <!-- Mini history chart -->
+            <div>
+              <div style="font-size:11px; color:var(--text-3); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">Posture history (last 20s)</div>
+              <div class="history-chart" id="historyChart">
+                <!-- bars injected by JS -->
+              </div>
+            </div>
+
           </div>
         </div>
 
-        <!-- Right panel -->
-        <div class="right-panel">
-
-          <!-- Alerts -->
-          <div class="panel-card">
-            <div class="card-header">
-              <span class="card-title">Recent Alerts</span>
-              <span class="alert-count" id="alertCount">0 new</span>
-            </div>
-            <div class="alerts-list" id="alertsList">
-              <div class="alert-empty">No alerts yet — start a session</div>
-            </div>
+        <!-- ── STRESS DETECTION CARD ── -->
+        <div class="stress-panel">
+          <div class="card-header">
+            <span class="card-title">Stress Detection</span>
+            <span id="stressGradeBadge" class="metric-badge badge-low" style="position:static; display:none;"></span>
           </div>
+          <div class="stress-body">
 
-          <!-- Tips -->
-          <div class="panel-card">
-            <div class="card-header">
-              <span class="card-title">Wellness Tips</span>
-            </div>
-            <div class="tips-list">
-              <div class="tip-item">
-                <div class="tip-num">1</div>
-                <div class="tip-text">Blink 15–20× per minute. Conscious blinking prevents dry eyes during screen time.</div>
+            <!-- Gauge + summary -->
+            <div class="stress-level-row">
+              <div class="stress-gauge-wrap">
+                <svg width="72" height="72" viewBox="0 0 72 72">
+                  <circle class="sgauge-bg"   cx="36" cy="36" r="30"/>
+                  <circle class="sgauge-fill" id="stressRing" cx="36" cy="36" r="30"
+                    stroke="#22c55e" stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+                </svg>
+                <div class="stress-num" id="stressNum">—</div>
               </div>
-              <div class="tip-item">
-                <div class="tip-num">2</div>
-                <div class="tip-text">Keep shoulders level and back straight. Align ears over shoulders.</div>
-              </div>
-              <div class="tip-item">
-                <div class="tip-num">3</div>
-                <div class="tip-text">Apply the 20-20-20 rule: every 20 min, look 20 feet away for 20 seconds.</div>
+              <div class="stress-summary">
+                <div class="stress-level-label" id="stressLevelLabel">Not started</div>
+                <div class="stress-level-desc"  id="stressLevelDesc">Start a session to detect facial stress signals in real time.</div>
               </div>
             </div>
+
+            <!-- Alert banner -->
+            <div class="stress-alert-banner" id="stressBanner">
+              <span class="banner-icon">⚠</span>
+              <span class="banner-text" id="stressBannerText">High stress detected — take a break</span>
+              <button class="banner-dismiss" onclick="document.getElementById('stressBanner').classList.remove('visible')">✕</button>
+            </div>
+
+            <!-- 4 signal bars -->
+            <div class="stress-signals">
+              <div class="signal-row">
+                <div class="signal-icon si-brow">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+                </div>
+                <span class="signal-label">Blink rate</span>
+                <div class="signal-bar"><div class="signal-fill" id="sfBrow" style="width:0%;background:#22c55e;"></div></div>
+                <span class="signal-val" id="svBrow">—</span>
+              </div>
+              <div class="signal-row">
+                <div class="signal-icon si-eye">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </div>
+                <span class="signal-label">Study time</span>
+                <div class="signal-bar"><div class="signal-fill" id="sfEye" style="width:0%;background:#22c55e;"></div></div>
+                <span class="signal-val" id="svEye">—</span>
+              </div>
+              <div class="signal-row" style="display:none;">
+                <div class="signal-icon si-jaw"></div>
+                <span class="signal-label"></span>
+                <div class="signal-bar"><div class="signal-fill" id="sfJaw" style="width:0%;"></div></div>
+                <span class="signal-val" id="svJaw"></span>
+              </div>
+              <div class="signal-row" style="display:none;">
+                <div class="signal-icon si-mouth"></div>
+                <span class="signal-label"></span>
+                <div class="signal-bar"><div class="signal-fill" id="sfMouth" style="width:0%;"></div></div>
+                <span class="signal-val" id="svMouth"></span>
+              </div>
+            </div>
+
+            <!-- Calming tip -->
+            <div class="stress-tip-box" id="stressTipBox">
+              <div class="stress-tip-title">Suggestion</div>
+              <div class="stress-tip-text" id="stressTipText">Start a session to receive personalised stress relief tips.</div>
+            </div>
+
+            <!-- History -->
+            <div>
+              <div style="font-size:11px; color:var(--text-3); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;">Stress history (last 20s)</div>
+              <div class="stress-history" id="stressHistory"></div>
+            </div>
+
           </div>
-
         </div>
+
+        <!-- Alerts -->
+        <div class="panel-card">
+          <div class="card-header">
+            <span class="card-title">Recent Alerts</span>
+            <span class="alert-count" id="alertCount">0 new</span>
+          </div>
+          <div class="alerts-list" id="alertsList">
+            <div class="alert-empty">No alerts yet — start a session</div>
+          </div>
+        </div>
+
       </div>
+    </div>
+  </main>
+</div>
 
-    </main>
+<!-- Hydration overlay -->
+<div id="hydrateOverlay" style="display:none;">
+  <div style="background:#111827; border:1px solid rgba(255,255,255,0.12); border-radius:14px; width:320px; overflow:hidden; font-family:'DM Sans',sans-serif;">
+    <div style="background:rgba(34,197,94,0.1); border-bottom:1px solid rgba(34,197,94,0.2); padding:28px 20px 20px; text-align:center; position:relative;">
+      <button onclick="closeHydratePopup()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:#22c55e;font-size:20px;cursor:pointer;">✕</button>
+      <div style="width:56px;height:56px;background:#22c55e;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 3C12 3 5 10 5 15a7 7 0 0 0 14 0c0-5-7-12-7-12z" fill="white"/></svg>
+      </div>
+      <div style="font-size:17px;font-weight:600;color:#f0f4ff;margin-bottom:6px;">Time to hydrate!</div>
+      <div style="font-size:12px;color:#22c55e;">Drink a glass of water now</div>
+    </div>
+    <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;gap:8px;">
+        <button onclick="popupDrink()" style="flex:1;padding:10px;background:#22c55e;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">I drank water</button>
+        <button onclick="popupSnooze()" style="padding:10px 14px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:8px;font-size:12px;color:#8899b4;cursor:pointer;">Snooze 5 min</button>
+      </div>
+      <div id="popupMsg" style="font-size:11px;color:#22c55e;text-align:center;min-height:16px;"></div>
+    </div>
   </div>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-  <script src="script.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const video  = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx    = canvas.getContext("2d");
 
+let blinkCount    = 0;
+let lastEyeState  = "open";
+let lastAlertTime = 0;
+let isRunning     = false;
+let cameraInst    = null;
+let timerInst     = null;
+let seconds       = 0;
+const alertsLog   = [];
 
+// Hydration
+const HYDRATE_INTERVAL = 10; // 10s for testing — change to 1200 for 20-min production use
+let hydrateSecsLeft = HYDRATE_INTERVAL;
+let hydrateTimer    = null;
+let cupsToday       = 0;
+
+// Posture
+const postureHistory = [];  // scores 0-100
+let postureScore     = 0;
+let lastPostureAlert = 0;
+let postureAlertCount = 0;
+
+// EAR landmarks
+const LEFT_EYE  = [33,160,158,133,153,144];
+const RIGHT_EYE = [362,385,387,263,373,380];
+const EAR_CLOSE = 0.20;
+const EAR_OPEN  = 0.22;
+
+function ear(lm, idx) {
+  const p = idx.map(i => lm[i]);
+  const d = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+  return (d(p[1],p[5]) + d(p[2],p[4])) / (2*d(p[0],p[3]));
+}
+
+// ── FaceMesh ───────────────────────────────────────────────────────────────
+const faceMesh = new FaceMesh({
+  locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`
+});
+faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
+faceMesh.onResults(onResults);
+
+// ── Per-frame ──────────────────────────────────────────────────────────────
+function onResults(results) {
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!results.multiFaceLandmarks?.length) return;
+  const lm = results.multiFaceLandmarks[0];
+
+  // Blink
+  const avgEar = (ear(lm, LEFT_EYE) + ear(lm, RIGHT_EYE)) / 2;
+  if (avgEar < EAR_CLOSE && lastEyeState === "open") {
+    blinkCount++;
+    lastEyeState = "closed";
+    document.getElementById("blinkVal").textContent = blinkCount;
+  }
+  if (avgEar > EAR_OPEN) lastEyeState = "open";
+  if (blinkCount < 5 && Date.now() - lastAlertTime > 8000)
+    pushAlert("info", "Blink more — your eyes need moisture");
+
+  // ── POSTURE ANALYSIS ────────────────────────────────────────────────────
+  analyzePosture(lm);
+
+  // Stress — blink rate + study time
+  analyzeStress();
+}
+
+// ── Posture Correction Engine ──────────────────────────────────────────────
+function analyzePosture(lm) {
+  const W = canvas.width, H = canvas.height;
+
+  // ── 1. HEAD TILT: angle between left ear (234) and right ear (454) ──────
+  const leftEar  = lm[234], rightEar = lm[454];
+  const dx = (rightEar.x - leftEar.x) * W;
+  const dy = (rightEar.y - leftEar.y) * H;
+  const tiltDeg  = Math.abs(Math.atan2(dy, dx) * 180 / Math.PI);
+  // Good = <5°, warn = 5-15°, bad = >15°
+  const tiltScore = tiltDeg < 5 ? 100 : tiltDeg < 15 ? Math.round(100 - (tiltDeg-5)*5) : Math.max(0, Math.round(50 - (tiltDeg-15)*3));
+
+  // ── 2. FORWARD LEAN: nose tip (4) vs chin (152) vertical ratio ──────────
+  // As face leans forward, nose appears higher relative to chin and forehead gap grows
+  const noseTip  = lm[4];
+  const forehead = lm[10];
+  const chin     = lm[152];
+  const faceH    = Math.abs((chin.y - forehead.y) * H);
+  // Normalised nose-to-chin distance: if leaning forward it shrinks relative to full face
+  const noseToChin = Math.abs((chin.y - noseTip.y) * H);
+  const leanRatio  = faceH > 0 ? noseToChin / faceH : 0.5;
+  // Ideal ratio ~0.5. Deviations > 0.08 indicate lean
+  const leanDev   = Math.abs(leanRatio - 0.50);
+  const leanScore = leanDev < 0.04 ? 100 : leanDev < 0.12 ? Math.round(100 - (leanDev-0.04)*750) : Math.max(0, 40);
+
+  // ── 3. FACE DISTANCE: face size as fraction of frame ────────────────────
+  // Large face = too close, small face = too far
+  const faceSizeFrac = faceH / H;
+  // Ideal ~0.55-0.75
+  let distScore;
+  if (faceSizeFrac < 0.35) distScore = Math.round(40 + faceSizeFrac * 80);         // too far
+  else if (faceSizeFrac < 0.55) distScore = Math.round(80 + (faceSizeFrac-0.35)*100); // slightly far
+  else if (faceSizeFrac <= 0.75) distScore = 100;                                    // ideal
+  else distScore = Math.max(0, Math.round(100 - (faceSizeFrac-0.75)*300));           // too close
+
+  // ── 4. SYMMETRY: left vs right eye Y-level ──────────────────────────────
+  const lEyeY = lm[159].y, rEyeY = lm[386].y;
+  const eyeAsymm = Math.abs(lEyeY - rEyeY) * H;
+  const symScore = eyeAsymm < 3 ? 100 : eyeAsymm < 12 ? Math.round(100 - eyeAsymm*5) : Math.max(0, 40);
+
+  // ── Overall posture score (weighted) ────────────────────────────────────
+  postureScore = Math.round(tiltScore*0.3 + leanScore*0.35 + distScore*0.2 + symScore*0.15);
+  postureScore = Math.max(0, Math.min(100, postureScore));
+
+  // Push to history (keep last 20 readings)
+  postureHistory.push(postureScore);
+  if (postureHistory.length > 20) postureHistory.shift();
+
+  // ── Update UI ─────────────────────────────────────────────────────────
+  updatePostureUI(postureScore, tiltScore, leanScore, distScore, symScore, tiltDeg, leanRatio, faceSizeFrac);
+
+  // Draw posture skeleton on canvas
+  drawPostureSkeleton(lm, postureScore);
+
+  // Update overlay badges
+  const tiltDir = dy > 0 ? "R" : "L";
+  const ol = document.getElementById("postureOverlay");
+  ol.style.display = "flex";
+  document.getElementById("tiltBadge").textContent = `TILT ${tiltDeg.toFixed(1)}° ${tiltDir}`;
+  document.getElementById("tiltBadge").style.color = tiltScore > 80 ? "#22c55e" : tiltScore > 50 ? "#f59e0b" : "#ef4444";
+  document.getElementById("leanBadge").textContent = `LEAN ${leanScore > 80 ? "OK" : leanRatio > 0.5 ? "FWD" : "BACK"}`;
+  document.getElementById("leanBadge").style.color  = leanScore > 80 ? "#22c55e" : leanScore > 50 ? "#f59e0b" : "#ef4444";
+  const distLabel = faceSizeFrac < 0.45 ? "FAR" : faceSizeFrac > 0.80 ? "CLOSE" : "OK";
+  document.getElementById("distBadge").textContent = `DIST ${distLabel}`;
+  document.getElementById("distBadge").style.color  = distScore > 80 ? "#22c55e" : distScore > 50 ? "#f59e0b" : "#ef4444";
+
+  // Posture status in camera footer
+  const statusEl = document.getElementById("postureStatusText");
+  statusEl.textContent = postureScore >= 80 ? "Good posture" : postureScore >= 55 ? "Adjust posture" : "Poor posture";
+  statusEl.style.color = postureScore >= 80 ? "#22c55e" : postureScore >= 55 ? "#f59e0b" : "#ef4444";
+
+  // Posture metric card
+  document.getElementById("postureScoreMetric").textContent = postureScore;
+  const pb = document.getElementById("postureBadge");
+  pb.textContent   = postureScore >= 80 ? "Good" : postureScore >= 55 ? "Fair" : "Poor";
+  pb.className     = "metric-badge " + (postureScore >= 80 ? "badge-good" : postureScore >= 55 ? "badge-warn" : "badge-bad");
+  pb.style.display = "inline-block";
+
+  // Posture alert
+  if (postureScore < 60 && Date.now() - lastPostureAlert > 7000) {
+    lastPostureAlert = Date.now();
+    postureAlertCount++;
+    const msgs = [
+      "Sit up straight — your spine needs alignment",
+      "Head tilting forward — pull your chin back",
+      "Move away from the screen a little",
+      "Roll shoulders back and open your chest"
+    ];
+    pushAlert("warn", msgs[postureAlertCount % msgs.length]);
+    showPostureBanner(postureScore, tiltScore, leanScore, distScore);
+  }
+}
+
+// ── Posture skeleton overlay ───────────────────────────────────────────────
+function drawPostureSkeleton(lm, score) {
+  const W = canvas.width, H = canvas.height;
+  const color = score >= 80 ? "rgba(34,197,94,0.7)" : score >= 55 ? "rgba(245,158,11,0.7)" : "rgba(239,68,68,0.7)";
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = 1.5;
+  ctx.setLineDash([]);
+
+  // Draw face oval
+  const noseTip  = lm[4];
+  const leftCheek  = lm[234];
+  const rightCheek = lm[454];
+  const chin       = lm[152];
+  const forehead   = lm[10];
+
+  const cx = noseTip.x * W;
+  const cy = noseTip.y * H;
+  const rx = Math.abs(rightCheek.x - leftCheek.x) * W / 2 + 8;
+  const ry = Math.abs(chin.y - forehead.y) * H / 2 + 4;
+
+  ctx.beginPath();
+  ctx.ellipse(cx, cy - ry*0.12, rx, ry, 0, 0, 2*Math.PI);
+  ctx.stroke();
+
+  // Midline (vertical)
+  ctx.setLineDash([4,4]);
+  ctx.strokeStyle = "rgba(59,130,246,0.5)";
+  ctx.beginPath();
+  ctx.moveTo(forehead.x * W, forehead.y * H - 20);
+  ctx.lineTo(chin.x * W,     chin.y * H + 10);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Shoulder line hint
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  const leftEar  = lm[234];
+  const rightEar = lm[454];
+  ctx.beginPath();
+  ctx.moveTo(leftEar.x * W  - 30, leftEar.y * H  + 20);
+  ctx.lineTo(rightEar.x * W + 30, rightEar.y * H + 20);
+  ctx.stroke();
+
+  // Eye dots
+  [159, 386].forEach(i => {
+    ctx.beginPath();
+    ctx.arc(lm[i].x * W, lm[i].y * H, 3, 0, 2*Math.PI);
+    ctx.fillStyle = color;
+    ctx.fill();
+  });
+
+  // Nose dot
+  ctx.beginPath();
+  ctx.arc(noseTip.x * W, noseTip.y * H, 3, 0, 2*Math.PI);
+  ctx.fillStyle = "rgba(59,130,246,0.7)";
+  ctx.fill();
+}
+
+// ── Posture UI update ──────────────────────────────────────────────────────
+function updatePostureUI(score, tilt, lean, dist, sym, tiltDeg, leanR, faceFrac) {
+  // Ring
+  const circ = 2 * Math.PI * 30;
+  const ring = document.getElementById("scoreRing");
+  ring.style.strokeDashoffset = circ - (score / 100) * circ;
+  ring.style.stroke = score >= 80 ? "#22c55e" : score >= 55 ? "#f59e0b" : "#ef4444";
+  document.getElementById("scoreLabel").textContent = score;
+
+  // Title + desc
+  let title, desc;
+  if (score >= 85)      { title = "Excellent posture"; desc = "Your spine alignment and head position are ideal. Keep it up!"; }
+  else if (score >= 70) { title = "Good posture";      desc = "Minor adjustments will help. Try straightening your back slightly."; }
+  else if (score >= 55) { title = "Fair posture";      desc = "Several posture issues detected. Follow the corrections below."; }
+  else                  { title = "Poor posture";      desc = "Significant posture problems detected. Please correct immediately."; }
+
+  document.getElementById("scoreTitle").textContent = title;
+  document.getElementById("scoreDesc").textContent  = desc;
+
+  // Grade badge
+  const gb = document.getElementById("postureGradeBadge");
+  gb.style.display = "inline-block";
+  gb.textContent   = score >= 80 ? "A" : score >= 65 ? "B" : score >= 50 ? "C" : "D";
+  gb.className = "metric-badge " + (score >= 80 ? "badge-good" : score >= 65 ? "badge-low" : "badge-warn");
+
+  // Breakdown bars
+  function setBar(barId, valId, s, unit) {
+    const el = document.getElementById(barId);
+    el.style.width = s + "%";
+    el.style.background = s >= 80 ? "#22c55e" : s >= 55 ? "#f59e0b" : "#ef4444";
+    document.getElementById(valId).textContent = s + unit;
+  }
+  setBar("barTilt", "valTilt", tilt, "");
+  setBar("barLean", "valLean", lean, "");
+  setBar("barDist", "valDist", dist, "");
+  setBar("barSym",  "valSym",  sym,  "");
+
+  // Guidance
+  updateGuidance(score, tilt, lean, dist, sym, tiltDeg, faceFrac);
+
+  // History chart
+  renderHistory();
+}
+
+function updateGuidance(score, tilt, lean, dist, sym, tiltDeg, faceFrac) {
+  const icon  = document.getElementById("guidanceIcon");
+  const title = document.getElementById("guidanceTitle");
+  const steps = document.getElementById("guidanceSteps");
+
+  const corrections = [];
+
+  if (tilt < 75) {
+    const dir = tiltDeg > 0 ? "right" : "left";
+    corrections.push(`Tilt your head to the ${dir === "right" ? "left" : "right"} — you're leaning ${dir} by ~${Math.round(tiltDeg)}°`);
+  }
+  if (lean < 75) corrections.push("You're leaning forward — sit back in your chair and keep your back against the backrest");
+  if (dist < 75) {
+    const d = faceFrac > 0.75 ? "too close to the screen — move back 10–20 cm" : "too far from the screen — move slightly closer";
+    corrections.push(`You're ${d}`);
+  }
+  if (sym < 75)  corrections.push("Your shoulders appear uneven — level them and relax your neck");
+
+  if (corrections.length === 0) {
+    icon.className = "guidance-icon g-good";
+    icon.textContent = "✓";
+    title.className = "guidance-title t-good";
+    title.textContent = "Great posture!";
+    steps.innerHTML = '<div class="guidance-step"><div class="step-dot" style="background:#22c55e;"></div>Keep your current position — spine is well aligned</div>';
+  } else {
+    const isWarn = score >= 55;
+    icon.className  = `guidance-icon ${isWarn ? "g-warn" : "g-bad"}`;
+    icon.textContent = isWarn ? "!" : "✕";
+    title.className = `guidance-title ${isWarn ? "t-warn" : "t-bad"}`;
+    title.textContent = `${corrections.length} correction${corrections.length > 1 ? "s" : ""} needed`;
+    steps.innerHTML = corrections.map(c =>
+      `<div class="guidance-step"><div class="step-dot"></div>${c}</div>`
+    ).join("");
+  }
+}
+
+function showPostureBanner(score, tilt, lean, dist, sym) {
+  const banner = document.getElementById("postureBanner");
+  const text   = document.getElementById("bannerText");
+  let msg = "Posture needs correction";
+  if (lean < 50) msg = "Leaning too far forward — sit back";
+  else if (dist < 50) msg = "Too close to screen — move back";
+  else if (tilt < 50) msg = "Head tilting — straighten your neck";
+  text.textContent = msg;
+  banner.classList.add("visible");
+  setTimeout(() => banner.classList.remove("visible"), 5000);
+}
+
+function renderHistory() {
+  const chart = document.getElementById("historyChart");
+  if (!postureHistory.length) return;
+  chart.innerHTML = postureHistory.map(s => {
+    const h = Math.max(4, Math.round(s * 0.36));
+    const bg = s >= 80 ? "#22c55e" : s >= 55 ? "#f59e0b" : "#ef4444";
+    return `<div class="history-bar" style="height:${h}px; background:${bg};"></div>`;
+  }).join("");
+}
+
+// ── Stress Detection Engine (blink rate + study time) ─────────────────────
+const stressHistory = [];
+let lastStressAlert = 0;
+
+function analyzeStress() {
+  // ── 1. BLINK RATE SIGNAL ────────────────────────────────────────────────
+  // Healthy blink rate: 15-20/min. We measure blinks per minute from elapsed seconds.
+  const minutesElapsed = seconds / 60;
+  const blinksPerMin   = minutesElapsed > 0 ? blinkCount / minutesElapsed : blinkCount;
+  // Low blink rate = more eye strain/stress. >15 = fine, <8 = high stress.
+  let blinkStress;
+  if (blinksPerMin >= 15)     blinkStress = 0;
+  else if (blinksPerMin >= 10) blinkStress = Math.round((15 - blinksPerMin) / 5 * 40);
+  else if (blinksPerMin >= 5)  blinkStress = Math.round(40 + (10 - blinksPerMin) / 5 * 35);
+  else                         blinkStress = Math.round(75 + Math.min(25, (5 - blinksPerMin) * 5));
+
+  // ── 2. STUDY TIME SIGNAL ────────────────────────────────────────────────
+  // Longer unbroken sessions = higher fatigue/stress.
+  // 0-20 min: low, 20-40 min: moderate, 40-60 min: high, 60+ min: very high
+  const mins = seconds / 60;
+  let timeStress;
+  if (mins < 20)      timeStress = Math.round(mins / 20 * 20);          // 0→20
+  else if (mins < 40) timeStress = Math.round(20 + (mins - 20) / 20 * 30); // 20→50
+  else if (mins < 60) timeStress = Math.round(50 + (mins - 40) / 20 * 30); // 50→80
+  else                timeStress = Math.min(100, Math.round(80 + (mins - 60) * 0.5));
+
+  // ── Composite stress score (60% blink, 40% time) ────────────────────────
+  const composite = Math.round(blinkStress * 0.6 + timeStress * 0.4);
+
+  stressHistory.push(composite);
+  if (stressHistory.length > 20) stressHistory.shift();
+
+  // Smooth with rolling avg of last 5
+  const smooth = Math.round(
+    stressHistory.slice(-5).reduce((a, b) => a + b, 0) / Math.min(5, stressHistory.length)
+  );
+
+  updateStressUI(smooth, blinkStress, timeStress, blinksPerMin);
+}
+
+function updateStressUI(score, blinkS, timeS, blinksPerMin) {
+  // Ring
+  const circ = 2 * Math.PI * 30;
+  const ring  = document.getElementById("stressRing");
+  ring.style.strokeDashoffset = circ - (score / 100) * circ;
+  ring.style.stroke = score < 30 ? "#22c55e" : score < 60 ? "#f59e0b" : "#ef4444";
+  document.getElementById("stressNum").textContent = score;
+
+  // Level label + desc + tip
+  let label, desc, tipText;
+  if (score < 25) {
+    label = "Calm";
+    desc  = "Good blink rate and short session. Your eyes are comfortable.";
+    tipText = "You're in great shape! Keep blinking regularly and take a short break every 20 minutes.";
+  } else if (score < 50) {
+    label = "Mild stress";
+    desc  = "Slightly low blink rate or extended session. A short rest will help.";
+    tipText = "Try the 20-20-20 rule: every 20 min, look 20 feet away for 20 seconds.";
+  } else if (score < 75) {
+    label = "Moderate stress";
+    desc  = "Low blink rate or long study session detected. Eye strain is building up.";
+    tipText = "Blink consciously 10 times slowly, then look away from the screen for 1 minute.";
+  } else {
+    label = "High stress";
+    desc  = "Very low blink rate and/or extended screen time. Take an immediate break.";
+    tipText = "Stop now — close your eyes for 2 minutes, drink water, and stretch your neck.";
+  }
+
+  document.getElementById("stressLevelLabel").textContent = label;
+  document.getElementById("stressLevelDesc").textContent  = desc;
+  document.getElementById("stressTipText").textContent    = tipText;
+
+  // Grade badge
+  const gb = document.getElementById("stressGradeBadge");
+  gb.style.display = "inline-block";
+  gb.textContent   = label;
+  gb.className = "metric-badge " + (score < 30 ? "badge-good" : score < 60 ? "badge-warn" : "badge-bad");
+
+  // Top metric card
+  document.getElementById("stressVal").textContent  = label;
+  document.getElementById("stressUnit").textContent = `Index: ${score} · ${blinksPerMin.toFixed(1)} blinks/min`;
+  const sb = document.getElementById("stressBadge");
+  sb.textContent   = score < 30 ? "Low" : score < 60 ? "Medium" : "High";
+  sb.className     = "metric-badge " + (score < 30 ? "badge-low" : score < 60 ? "badge-warn" : "badge-bad");
+  sb.style.display = "inline-block";
+
+  // Signal bars
+  function setSignal(fillId, valId, s) {
+    const el = document.getElementById(fillId);
+    el.style.width      = s + "%";
+    el.style.background = s < 30 ? "#22c55e" : s < 60 ? "#f59e0b" : "#ef4444";
+    document.getElementById(valId).textContent = s;
+  }
+  setSignal("sfBrow",  "svBrow",  blinkS);   // repurposed: blink stress
+  setSignal("sfEye",   "svEye",   timeS);    // repurposed: time stress
+  // Hide jaw/mouth bars — not used
+  ["sfJaw","sfMouth"].forEach(id => document.getElementById(id).style.width = "0%");
+  ["svJaw","svMouth"].forEach(id => document.getElementById(id).textContent = "—");
+
+  // History chart
+  const chart = document.getElementById("stressHistory");
+  chart.innerHTML = stressHistory.map(s => {
+    const h  = Math.max(4, Math.round(s * 0.36));
+    const bg = s < 30 ? "#22c55e" : s < 60 ? "#f59e0b" : "#ef4444";
+    return `<div class="sh-bar" style="height:${h}px; background:${bg};"></div>`;
+  }).join("");
+
+  // Alert if high
+  if (score >= 70 && Date.now() - lastStressAlert > 15000) {
+    lastStressAlert = Date.now();
+    document.getElementById("stressBannerText").textContent =
+      score >= 85 ? "Very high stress — please take an immediate break!" : "Stress rising — blink more and rest your eyes";
+    document.getElementById("stressBanner").classList.add("visible");
+    setTimeout(() => document.getElementById("stressBanner").classList.remove("visible"), 6000);
+    pushAlert("warn", score >= 85 ? "High stress — take a break now" : "Stress rising — try blinking more");
+  }
+}
+
+// ── Alerts ─────────────────────────────────────────────────────────────────
+function pushAlert(type, msg) {
+  if (Date.now() - lastAlertTime < 3000) return;
+  lastAlertTime = Date.now();
+  const time = new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  alertsLog.unshift({type, msg, time});
+  if (alertsLog.length > 8) alertsLog.pop();
+  document.getElementById("alertsList").innerHTML = alertsLog.map(a =>
+    `<div class="alert-item">
+       <div class="alert-dot dot-${a.type}"></div>
+       <span class="alert-msg">${a.msg}</span>
+       <span class="alert-time">${a.time}</span>
+     </div>`
+  ).join("");
+  document.getElementById("alertCount").textContent = alertsLog.length + " new";
+}
+
+function setMetric(valId, badgeId, text, cls) {
+  document.getElementById(valId).textContent = text;
+  const b = document.getElementById(badgeId);
+  b.textContent   = text;
+  b.className     = "metric-badge " + cls;
+  b.style.display = "inline-block";
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function setUI(active) {
+  const btn = document.getElementById("startBtn");
+  btn.textContent = active ? "End Session" : "Start Session";
+  active ? btn.classList.add("btn-danger") : btn.classList.remove("btn-danger");
+  document.getElementById("statusDot").classList.toggle("active", active);
+  document.getElementById("statusText").textContent = active ? "Active" : "Inactive";
+  document.getElementById("statusPill").classList.toggle("pill-active", active);
+  document.getElementById("cameraLabel").textContent = active ? "ANALYZING" : "STANDBY";
+  document.getElementById("cameraLabel").classList.toggle("label-active", active);
+  document.getElementById("placeholder").style.display = active ? "none" : "flex";
+  document.getElementById("scanLine").style.display    = active ? "block" : "none";
+  document.getElementById("liveBadge").classList.toggle("live-on", active);
+  document.getElementById("cameraView").classList.toggle("camera-active", active);
+  if (!active) document.getElementById("postureOverlay").style.display = "none";
+}
+
+function resetMetrics() {
+  ["blinkVal"].forEach(id => document.getElementById(id).textContent = "—");
+  ["postureBadge","stressBadge"].forEach(id => document.getElementById(id).style.display = "none");
+  document.getElementById("sessionTime").textContent = "00:00";
+  document.getElementById("postureScoreMetric").textContent = "—";
+  document.getElementById("alertsList").innerHTML = '<div class="alert-empty">No alerts yet — start a session</div>';
+  document.getElementById("alertCount").textContent = "0 new";
+  document.getElementById("scoreLabel").textContent = "—";
+  document.getElementById("scoreRing").style.strokeDashoffset = "188.5";
+  document.getElementById("scoreTitle").textContent = "Not started";
+  document.getElementById("scoreDesc").textContent = "Start a session to begin real-time posture analysis.";
+  document.getElementById("postureGradeBadge").style.display = "none";
+  ["barTilt","barLean","barDist","barSym"].forEach(id => document.getElementById(id).style.width = "0%");
+  ["valTilt","valLean","valDist","valSym"].forEach(id => document.getElementById(id).textContent = "—");
+  stressHistory.length = 0;
+  document.getElementById("stressNum").textContent        = "—";
+  document.getElementById("stressLevelLabel").textContent = "Not started";
+  document.getElementById("stressLevelDesc").textContent  = "Start a session to detect facial stress signals in real time.";
+  document.getElementById("stressGradeBadge").style.display = "none";
+  document.getElementById("stressHistory").innerHTML = "";
+  ["sfBrow","sfEye","sfJaw","sfMouth"].forEach(id => document.getElementById(id).style.width = "0%");
+  ["svBrow","svEye","svJaw","svMouth"].forEach(id => document.getElementById(id).textContent = "—");
+  document.getElementById("stressTipText").textContent = "Start a session to receive personalised stress relief tips.";
+  document.getElementById("stressVal").textContent  = "—";
+  document.getElementById("stressUnit").textContent = "facial tension";
+  document.getElementById("historyChart").innerHTML = "";
+  document.getElementById("postureStatusText").textContent = "—";
+  postureHistory.length = 0;
+}
+
+// ── Start / Stop ───────────────────────────────────────────────────────────
+async function startSession() {
+  blinkCount = 0; lastEyeState = "open"; alertsLog.length = 0;
+  seconds = 0; cupsToday = 0; postureAlertCount = 0;
+  postureHistory.length = 0;
+  stressHistory.length = 0;
+
+  hydrateSecsLeft = HYDRATE_INTERVAL;
+  clearInterval(hydrateTimer);
+  hydrateTimer = setInterval(() => {
+    hydrateSecsLeft--;
+    if (hydrateSecsLeft <= 0) { showHydratePopup(); hydrateSecsLeft = HYDRATE_INTERVAL; }
+  }, 1000);
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { width:640, height:480, facingMode:"user" } });
+    video.srcObject = stream;
+    video.style.display = "block";
+    canvas.style.display = "block";
+    await new Promise(res => { video.onloadedmetadata = res; });
+    await video.play();
+
+    cameraInst = new Camera(video, {
+      onFrame: async () => { if (isRunning) await faceMesh.send({ image: video }); },
+      width: 640, height: 480
+    });
+    cameraInst.start();
+    isRunning = true;
+    setUI(true);
+
+    timerInst = setInterval(() => {
+      seconds++;
+      const m = String(Math.floor(seconds/60)).padStart(2,"0");
+      const s = String(seconds%60).padStart(2,"0");
+      document.getElementById("sessionTime").textContent = m+":"+s;
+    }, 1000);
+
+  } catch(err) {
+    console.error("Camera error:", err);
+    alert("Camera access denied. Please allow camera permissions and try again.");
+  }
+}
+
+function stopSession() {
+  isRunning = false;
+  clearInterval(timerInst);
+  clearInterval(hydrateTimer);
+  closeHydratePopup();
+  if (cameraInst) { cameraInst.stop(); cameraInst = null; }
+  if (video.srcObject) { video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; }
+  video.style.display = "none";
+  canvas.style.display = "none";
+  setUI(false);
+  resetMetrics();
+}
+
+document.getElementById("startBtn").onclick = () => {
+  if (!isRunning) startSession(); else stopSession();
+};
+
+// ── Hydration popup ────────────────────────────────────────────────────────
+function showHydratePopup() {
+  const overlay = document.getElementById("hydrateOverlay");
+  overlay.style.cssText = "display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:99999; align-items:center; justify-content:center;";
+}
+function closeHydratePopup() {
+  const o = document.getElementById("hydrateOverlay");
+  if (o) o.style.display = "none";
+}
+function popupDrink() {
+  cupsToday++;
+  document.getElementById("popupMsg").textContent = "Logged! " + cupsToday + " cups today.";
+  pushAlert("good", "Drink logged — " + cupsToday + " cups today");
+  setTimeout(closeHydratePopup, 1200);
+}
+function popupSnooze() {
+  hydrateSecsLeft = 300;
+  document.getElementById("popupMsg").textContent = "Snoozed — reminding you in 5 minutes.";
+  setTimeout(closeHydratePopup, 1200);
+}
+</script>
 </body>
 </html>
