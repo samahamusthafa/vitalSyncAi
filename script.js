@@ -1,138 +1,193 @@
-const video = document.getElementById("video");
-const startBtn = document.getElementById("startBtn");
+// ─── Elements ─────────────────────────────────────────────────────────────
+const video  = document.getElementById("video");
 const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+const ctx    = canvas.getContext("2d");
 
-let blinkCount = 0;
-let lastEyeState = "open";
-let lastAlertTime = 0; // prevent spam alerts
+// ─── State ────────────────────────────────────────────────────────────────
+let blinkCount    = 0;
+let lastEyeState  = "open";
+let lastAlertTime = 0;
+let isRunning     = false;
+let cameraInst    = null;
+let timerInst     = null;
+let seconds       = 0;
+const alertsLog   = [];
 
-// 🎥 Start Camera
-startBtn.onclick = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = stream;
+// ─── EAR landmarks ────────────────────────────────────────────────────────
+const LEFT_EYE  = [33,  160, 158, 133, 153, 144];
+const RIGHT_EYE = [362, 385, 387, 263, 373, 380];
+const EAR_CLOSE = 0.20;  // below this = eye closed
+const EAR_OPEN  = 0.22;  // above this = eye open (hysteresis)
 
-    const camera = new Camera(video, {
-      onFrame: async () => {
-        await faceMesh.send({ image: video });
-      },
-      width: 640,
-      height: 480
-    });
-
-    camera.start();
-
-  } catch (error) {
-    console.error("Camera Error:", error);
-    showAlert("Camera access denied ❌");
-  }
-};
-
-// 😤 Stress Function
-function updateStress(blinkCount) {
-  let stress;
-
-  if (blinkCount < 5) {
-    stress = "High";
-  } else if (blinkCount < 10) {
-    stress = "Medium";
-  } else {
-    stress = "Low";
-  }
-
-  document.getElementById("stress").innerText =
-    stress === "High" ? "🔴 High" :
-    stress === "Medium" ? "🟡 Medium" : "🟢 Low";
+function ear(lm, idx) {
+  const p = idx.map(i => lm[i]);
+  const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  return (d(p[1], p[5]) + d(p[2], p[4])) / (2 * d(p[0], p[3]));
 }
 
-// 💧 Hydration Reminder (every 1 min)
-setInterval(() => {
-  showAlert("Drink water 💧");
-}, 60000);
-
-// 🔔 Alert Function (with anti-spam)
-function showAlert(msg) {
-  const now = Date.now();
-
-  // prevent alert spam (3 sec gap)
-  if (now - lastAlertTime < 3000) return;
-
-  lastAlertTime = now;
-
-  const box = document.getElementById("alertBox");
-  box.innerText = msg;
-
-  setTimeout(() => {
-    box.innerText = "";
-  }, 3000);
-}
-
-// 🤖 FaceMesh Setup
+// ─── FaceMesh ─────────────────────────────────────────────────────────────
 const faceMesh = new FaceMesh({
-  locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-  }
+  locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`
 });
-
 faceMesh.setOptions({
   maxNumFaces: 1,
   refineLandmarks: true,
   minDetectionConfidence: 0.5,
   minTrackingConfidence: 0.5
 });
-
 faceMesh.onResults(onResults);
 
-// 👁️ Detection Logic
+// ─── Per-frame detection ──────────────────────────────────────────────────
 function onResults(results) {
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-    const landmarks = results.multiFaceLandmarks[0];
+  if (!results.multiFaceLandmarks?.length) return;
+  const lm = results.multiFaceLandmarks[0];
 
-    // 👁️ Blink Detection
-    const leftEyeTop = landmarks[159].y;
-    const leftEyeBottom = landmarks[145].y;
+  // Blink
+  const avgEar = (ear(lm, LEFT_EYE) + ear(lm, RIGHT_EYE)) / 2;
+  if (avgEar < EAR_CLOSE && lastEyeState === "open") {
+    blinkCount++;
+    lastEyeState = "closed";
+    document.getElementById("blinkVal").textContent = blinkCount;
+  }
+  if (avgEar > EAR_OPEN) lastEyeState = "open";
 
-    const eyeOpen = Math.abs(leftEyeTop - leftEyeBottom);
+  if (blinkCount < 5 && Date.now() - lastAlertTime > 8000)
+    pushAlert("info", "Blink more — your eyes need moisture");
 
-    if (eyeOpen < 0.015 && lastEyeState === "open") {
-      blinkCount++;
-      lastEyeState = "closed";
-    }
+  // Posture
+  const tilt    = lm[10].y - lm[1].y;
+  const posture = tilt > 0.1 ? "Poor" : "Good";
+  if (posture === "Poor" && Date.now() - lastAlertTime > 6000)
+    pushAlert("warn", "Sit straight — posture drift detected");
 
-    if (eyeOpen > 0.02) {
-      lastEyeState = "open";
-    }
+  // Stress
+  const stress = blinkCount < 5 ? "High" : blinkCount < 12 ? "Medium" : "Calm";
+  const stressClass = stress === "Calm" ? "badge-low" : "badge-warn";
 
-    document.getElementById("blink").innerText = blinkCount;
+  setMetric("postureVal", "postureBadge", posture, posture === "Good" ? "badge-good" : "badge-warn");
+  setMetric("stressVal",  "stressBadge",  stress,  stressClass);
+}
 
-    updateStress(blinkCount);
+function setMetric(valId, badgeId, text, cls) {
+  document.getElementById(valId).textContent  = text;
+  const b = document.getElementById(badgeId);
+  b.textContent   = text;
+  b.className     = "metric-badge " + cls;
+  b.style.display = "inline-block";
+}
 
-    if (blinkCount < 5 && Date.now() - lastAlertTime > 5000) {
-      showAlert("Blink more 👁️");
-    }
+// ─── Alerts ───────────────────────────────────────────────────────────────
+function pushAlert(type, msg) {
+  if (Date.now() - lastAlertTime < 3000) return;
+  lastAlertTime = Date.now();
+  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  alertsLog.unshift({ type, msg, time });
+  if (alertsLog.length > 6) alertsLog.pop();
+  document.getElementById("alertsList").innerHTML = alertsLog.map(a =>
+    `<div class="alert-item">
+       <div class="alert-dot dot-${a.type}"></div>
+       <span class="alert-msg">${a.msg}</span>
+       <span class="alert-time">${a.time}</span>
+     </div>`
+  ).join("");
+  document.getElementById("alertCount").textContent = alertsLog.length + " new";
+}
 
-    // ✅ 🧍 Posture Detection (INSIDE BLOCK)
-    const nose = landmarks[1];
-    const forehead = landmarks[10];
+// ─── UI helpers ───────────────────────────────────────────────────────────
+function setUI(active) {
+  const btn = document.getElementById("startBtn");
+  btn.textContent = active ? "End Session" : "Start Session";
+  active ? btn.classList.add("btn-danger") : btn.classList.remove("btn-danger");
 
-    const tilt = forehead.y - nose.y;
+  document.getElementById("statusDot").classList.toggle("active", active);
+  document.getElementById("statusText").textContent = active ? "Active" : "Inactive";
+  document.getElementById("statusPill").classList.toggle("pill-active", active);
 
-    let posture;
+  document.getElementById("cameraLabel").textContent = active ? "ANALYZING" : "STANDBY";
+  document.getElementById("cameraLabel").classList.toggle("label-active", active);
+  document.getElementById("placeholder").style.display = active ? "none" : "flex";
+  document.getElementById("scanLine").style.display    = active ? "block" : "none";
+  document.getElementById("liveBadge").classList.toggle("live-on", active);
+  document.getElementById("cameraView").classList.toggle("camera-active", active);
+}
 
-    if (tilt > 0.1) {
-      posture = "Bad";
+function resetMetrics() {
+  ["blinkVal","postureVal","stressVal"].forEach(id =>
+    document.getElementById(id).textContent = "—");
+  ["postureBadge","stressBadge"].forEach(id =>
+    document.getElementById(id).style.display = "none");
+  document.getElementById("sessionTime").textContent = "00:00";
+  document.getElementById("alertsList").innerHTML =
+    '<div class="alert-empty">No alerts yet — start a session</div>';
+  document.getElementById("alertCount").textContent = "0 new";
+}
 
-      if (Date.now() - lastAlertTime > 3000) {
-        showAlert("Sit straight 🧍");
-      }
+// ─── Start / Stop ─────────────────────────────────────────────────────────
+async function startSession() {
+  blinkCount    = 0;
+  lastEyeState  = "open";
+  alertsLog.length = 0;
+  seconds       = 0;
 
-    } else {
-      posture = "Good";
-    }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480, facingMode: "user" }
+    });
+    video.srcObject = stream;
+    video.style.display  = "block";
+    canvas.style.display = "block";
 
-    document.getElementById("posture").innerText = posture;
+    await new Promise(res => { video.onloadedmetadata = res; });
+    await video.play();
+
+    cameraInst = new Camera(video, {
+      onFrame: async () => { if (isRunning) await faceMesh.send({ image: video }); },
+      width: 640, height: 480
+    });
+    cameraInst.start();
+
+    isRunning = true;
+    setUI(true);
+
+    timerInst = setInterval(() => {
+      seconds++;
+      const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+      const s = String(seconds % 60).padStart(2, "0");
+      document.getElementById("sessionTime").textContent = m + ":" + s;
+    }, 1000);
+
+  } catch (err) {
+    console.error("Camera error:", err);
+    alert("Camera access denied. Please allow camera permissions and try again.");
   }
 }
+
+function stopSession() {
+  isRunning = false;
+  clearInterval(timerInst);
+  if (cameraInst) { cameraInst.stop(); cameraInst = null; }
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
+  }
+  video.style.display  = "none";
+  canvas.style.display = "none";
+  setUI(false);
+  resetMetrics();
+}
+
+// ─── Button wiring ────────────────────────────────────────────────────────
+// Replace the toggleSession() onclick set in HTML with a single controller
+document.getElementById("startBtn").onclick = () => {
+  if (!isRunning) startSession();
+  else            stopSession();
+};
+
+// ─── Hydration reminder ───────────────────────────────────────────────────
+setInterval(() => {
+  if (isRunning) pushAlert("info", "Drink water — stay hydrated");
+}, 60000);

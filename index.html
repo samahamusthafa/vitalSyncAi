@@ -74,7 +74,7 @@
             <span class="status-dot" id="statusDot"></span>
             <span id="statusText">Inactive</span>
           </div>
-          <button class="btn-primary" id="startBtn" onclick="toggleSession()">Start Session</button>
+          <button class="btn-primary" id="startBtn">Start Session</button>
         </div>
       </div>
 
@@ -140,12 +140,11 @@
             </span>
           </div>
           <div class="camera-view" id="cameraView">
-            <div class="corner-bracket tl"></div>
-            <div class="corner-bracket tr"></div>
-            <div class="corner-bracket bl"></div>
-            <div class="corner-bracket br"></div>
-            <video id="video" autoplay style="display:none;"></video>
-            <canvas id="canvas" style="display:none;"></canvas>
+            <!-- video fills the box; canvas sits on top for landmarks only -->
+            <video id="video" autoplay playsinline muted style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;"></video>
+            <canvas id="canvas" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%;"></canvas>
+
+            <!-- placeholder shown when camera is off -->
             <div class="camera-placeholder" id="placeholder">
               <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
                 <rect x="2" y="6" width="14" height="12" rx="2.5" stroke="#4a5568" stroke-width="1.5"/>
@@ -154,7 +153,12 @@
               <p>Camera preview will appear here</p>
               <span>Start a session to begin monitoring</span>
             </div>
-            <div class="face-ring" id="faceRing" style="display:none;"></div>
+
+            <!-- decorative overlays — pointer-events:none so they don't block video -->
+            <div class="corner-bracket tl"></div>
+            <div class="corner-bracket tr"></div>
+            <div class="corner-bracket bl"></div>
+            <div class="corner-bracket br"></div>
             <div class="scan-line" id="scanLine" style="display:none;"></div>
             <div class="camera-label" id="cameraLabel">STANDBY</div>
           </div>
@@ -215,95 +219,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="script.js"></script>
 
-  <script>
-    let active = false, seconds = 0, timer = null, alertCount = 0;
 
-    const alerts = [
-      { type: 'info', msg: 'Blink rate dropping — remember to blink', time: '2m ago' },
-      { type: 'warn', msg: 'Posture drift detected — sit up straight', time: '8m ago' },
-      { type: 'good', msg: 'Break taken — great job!', time: '22m ago' },
-    ];
-
-    function toggleSession() {
-      active = !active;
-      const btn = document.getElementById('startBtn');
-      const dot = document.getElementById('statusDot');
-      const statusText = document.getElementById('statusText');
-      const pill = document.getElementById('statusPill');
-      const cameraLabel = document.getElementById('cameraLabel');
-      const placeholder = document.getElementById('placeholder');
-      const faceRing = document.getElementById('faceRing');
-      const scanLine = document.getElementById('scanLine');
-      const liveBadge = document.getElementById('liveBadge');
-      const cameraView = document.getElementById('cameraView');
-
-      if (active) {
-        btn.textContent = 'End Session';
-        btn.classList.add('btn-danger');
-        dot.classList.add('active');
-        statusText.textContent = 'Active';
-        pill.classList.add('pill-active');
-        cameraLabel.textContent = 'ANALYZING';
-        cameraLabel.classList.add('label-active');
-        placeholder.style.display = 'none';
-        faceRing.style.display = 'block';
-        scanLine.style.display = 'block';
-        liveBadge.classList.add('live-on');
-        cameraView.classList.add('camera-active');
-
-        seconds = 0;
-        timer = setInterval(() => {
-          seconds++;
-          const m = String(Math.floor(seconds / 60)).padStart(2, '0');
-          const s = String(seconds % 60).padStart(2, '0');
-          document.getElementById('sessionTime').textContent = m + ':' + s;
-
-          if (seconds === 2) {
-            document.getElementById('blinkVal').textContent = '14';
-            document.getElementById('postureVal').textContent = 'Upright';
-            document.getElementById('stressVal').textContent = 'Calm';
-            document.getElementById('postureBadge').style.display = 'inline-block';
-            document.getElementById('stressBadge').style.display = 'inline-block';
-            renderAlerts();
-          }
-        }, 1000);
-
-      } else {
-        btn.textContent = 'Start Session';
-        btn.classList.remove('btn-danger');
-        dot.classList.remove('active');
-        statusText.textContent = 'Inactive';
-        pill.classList.remove('pill-active');
-        cameraLabel.textContent = 'STANDBY';
-        cameraLabel.classList.remove('label-active');
-        placeholder.style.display = 'flex';
-        faceRing.style.display = 'none';
-        scanLine.style.display = 'none';
-        liveBadge.classList.remove('live-on');
-        cameraView.classList.remove('camera-active');
-        clearInterval(timer);
-        document.getElementById('sessionTime').textContent = '00:00';
-        document.getElementById('blinkVal').textContent = '—';
-        document.getElementById('postureVal').textContent = '—';
-        document.getElementById('stressVal').textContent = '—';
-        document.getElementById('postureBadge').style.display = 'none';
-        document.getElementById('stressBadge').style.display = 'none';
-        document.getElementById('alertsList').innerHTML = '<div class="alert-empty">No alerts yet — start a session</div>';
-        document.getElementById('alertCount').textContent = '0 new';
-      }
-    }
-
-    function renderAlerts() {
-      const list = document.getElementById('alertsList');
-      list.innerHTML = alerts.map(a => `
-        <div class="alert-item alert-${a.type}">
-          <div class="alert-dot dot-${a.type}"></div>
-          <span class="alert-msg">${a.msg}</span>
-          <span class="alert-time">${a.time}</span>
-        </div>
-      `).join('');
-      document.getElementById('alertCount').textContent = `${alerts.length} new`;
-    }
-  </script>
 </body>
 </html>
