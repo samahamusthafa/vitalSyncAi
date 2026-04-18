@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WellDesk AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="container">
+    <h1>WellDesk AI</h1>
+    <button id="startBtn">Start Session</button>
+
+    <!-- ✅ Wrap video + canvas -->
+    <div class="video-container">
+      <video id="video" autoplay></video>
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="stats">
+      <p>Blink Rate: <span id="blink">0</span></p>
+      <p>Posture: <span id="posture">Good</span></p>
+      <p>Stress: <span id="stress">Low</span></p>
+    </div>
+
+    <div id="alertBox"></div>
+  </div>
+
+  <!-- ✅ Correct scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+  <script src="script.js"></script>
+</body>
+</html>
